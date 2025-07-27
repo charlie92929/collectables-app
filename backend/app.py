@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
+import datetime
 import os
 
 UPLOAD_FOLDER = "uploads"
@@ -13,7 +14,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///items.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 db=SQLAlchemy(app)
 
@@ -23,7 +24,8 @@ class Item(db.Model):
     image = db.Column(db.String(120), nullable=False)
     name = db.Column(db.String(120), nullable=False)
     description = db.Column(db.String(120), nullable=False)
-    tags = db.Column(db.String(120), nullable=True)
+    tags = db.Column(db.String(121), nullable=True)
+    date_created = db.Column(db.DateTime, default=datetime.datetime.now(datetime.timezone.utc))
     
     def to_dict(self): 
         return { 
@@ -31,7 +33,8 @@ class Item(db.Model):
             "name": self.name, 
             "image": self.image,
             "description": self.description,
-            "tags": self.tags.split(',') if self.tags else []
+            "tags": self.tags.split(',') if self.tags else [],
+            "date_created": self.date_created
         }
 
 def allowed_file(filename):
@@ -47,9 +50,8 @@ def hello():
 
 @app.route('/upload', methods=["POST"])
 def upload():
-    data = request.get_json()
-    if not data:
-        print("No data passed")
+    if 'image' not in request.files:
+        return jsonify({'message': 'no file in request'}, 400)
      # old
     # {
     #     'item': "Charizard"
@@ -58,8 +60,9 @@ def upload():
     # {
     #     'name': "Charizard",
     #     'description': "A rare pokemon you can only get if you're lucky",
-    #     'tags': "shiny, epic"
-    #     'image': charizard.png
+    #     'tags': "shiny, epic",
+    #     'image': charizard.png,
+    #     'date_created': 2025-07-27::18:16:26
     # }
     name = request.form.get('name')
     description = request.form.get('description')
@@ -70,7 +73,8 @@ def upload():
         image = request.files['image']
         if image and allowed_file(image.filename):
             filename = secure_filename(image.filename)
-            image_path = os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             image.save(image_path)
     # Creates a new instance of the item class
     # Item(id, "Charizard")
@@ -88,6 +92,10 @@ def upload():
     # complete  the transaction
     db.session.commit()
     return jsonify(f"Item {name} has been added")
+
+@app.route('/uploads/<filename>')
+def display_image(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/items')
 def items():
