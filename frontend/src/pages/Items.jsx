@@ -20,7 +20,7 @@ export default function Items() {
                 {items.map((item, i) => (
                     <li key={i}>
                         <strong>{item.name}</strong>
-                        <p>{item.desc}</p>
+                        <p>description: {item.description}</p>
                         {item.tags?.length > 0 && <p>Tags: {item.tags.join(', ')}</p>}
                         {item.image && (
                             <img
