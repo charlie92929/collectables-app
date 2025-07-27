@@ -90,10 +90,7 @@ def upload():
     # add new_item to database
     db.session.add(new_item)
     # complete  the transaction
-    db.session.commit()
-    return jsonify(f"Item {name} has been added")
-
-@app.route('/uploads/<filename>')
+    db.<filename>')
 def display_image(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
